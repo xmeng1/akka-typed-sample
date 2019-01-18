@@ -28,8 +28,8 @@ val `akka-typed-sample` = project
       "com.typesafe.akka" %% "akka-distributed-data" % akkaVersion,
       "com.typesafe.akka" %% "akka-cluster-tools" % akkaVersion,
       "com.typesafe.akka" %% "akka-stream-typed" % akkaVersion,
-      
       "com.typesafe.akka" %% "akka-multi-node-testkit" % akkaVersion,
+      "com.typesafe.akka" %% "akka-actor-testkit-typed" % akkaVersion % Test,
       "org.scalatest" %% "scalatest" % "3.0.5" % Test),
     fork in run := true,
     // disable parallel tests
