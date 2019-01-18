@@ -141,8 +141,9 @@ object IntroSpec {
               name = URLEncoder.encode(screenName, StandardCharsets.UTF_8.name))
             client ! SessionGranted(ses)
             chatRoom(ses :: sessions)
-          case PublishSessionMessage(screenName, message) ⇒
-            val notification = NotifyClient(MessagePosted(screenName, message))
+          case PublishSessionMessage(screenName, message1) ⇒
+            println(s"chatRoom: PublishSessionMessage $screenName and message: $message1")
+            val notification = NotifyClient(MessagePosted(screenName, message1))
             sessions foreach (_ ! notification)
             Behaviors.same
         }
@@ -156,6 +157,7 @@ object IntroSpec {
         message match {
           case PostMessage(message) ⇒
             // from client, publish to others via the room
+            println(s"session: PostMessage $message")
             room ! PublishSessionMessage(screenName, message)
             Behaviors.same
           case NotifyClient(message) ⇒
@@ -195,8 +197,9 @@ class IntroSpec extends ScalaTestWithActorTestKit with WordSpecLike {
     "chat" in {
       //#chatroom-gabbler
       import ChatRoom._
+      var list: List[ActorRef[PostMessage]] = List.empty
 
-      val gabbler: Behavior[SessionEvent] =
+      val gabbler: Behavior[SessionEvent] = {
         Behaviors.receiveMessage {
           //#chatroom-gabbler
           // We document that the compiler warns about the missing handler for `SessionDenied`
@@ -205,25 +208,38 @@ class IntroSpec extends ScalaTestWithActorTestKit with WordSpecLike {
             Behaviors.stopped
           //#chatroom-gabbler
           case SessionGranted(handle) ⇒
+            println(s"SessionGranted: $handle")
+            list = handle :: list
             handle ! PostMessage("Hello World!")
             Behaviors.same
           case MessagePosted(screenName, message) ⇒
             println(s"message has been posted by '$screenName': $message")
             Behaviors.stopped
         }
+      }
       //#chatroom-gabbler
 
       //#chatroom-main
       val main: Behavior[NotUsed] =
         Behaviors.setup { context ⇒
+          println(s"main setup")
           val chatRoom = context.spawn(ChatRoom.behavior, "chatroom")
           val gabblerRef = context.spawn(gabbler, "gabbler")
+          val gabblerRef2 = context.spawn(gabbler, "gabbler2")
           context.watch(gabblerRef)
+          context.watch(gabblerRef2)
           chatRoom ! GetSession("ol’ Gabbler", gabblerRef)
+          println(s"current list: $list")
+          chatRoom ! GetSession("ol’ Gabbler2", gabblerRef2)
+          println(s"current list: $list")
 
           Behaviors.receiveSignal {
-            case (_, Terminated(ref)) ⇒
-              Behaviors.stopped
+            case (x, Terminated(ref)) ⇒
+              println(s"receive signal: $x")
+              println(s"current list: $list")
+              list.head ! PostMessage("Good Morning, I am Gabbler")
+              list(1) ! PostMessage("Good Morning, I am Gabbler2")
+              Behaviors.same
           }
         }
 
