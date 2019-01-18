@@ -40,12 +40,14 @@ object HelloWorld {
     /*
      * The type of the messages handled by this behavior is declared to be of class Greet, meaning that message argument is also typed as such. This is why we can access the whom and replyTo members without needing to use a pattern match.
      * */
-    println(s"Hello ${message.whom}!")
+    println(s"Greeter: Hello ${message.whom}!")
 //    context.log.info("Greeter: receive message: {}", message)
+    println(s"Greeter: receive message: $message")
     /*
      * On the last line we see the HelloWorld Actor send a message to another Actor, which is done using the ! operator (pronounced “bang” or “tell”). Since the replyTo address is declared to be of type ActorRef[Greeted], the compiler will only permit us to send messages of this type, other usage will not be accepted.
      * */
     message.replyTo ! Greeted(message.whom, context.self)
+    println(s"Greeter:  send Greeted message to message.replyTo ${message.replyTo}")
 //    context.log.info(
 //      "Greeter: reply Greeted {} to message: {}",
 //      Greeted(message.whom, context.self),
@@ -61,11 +63,13 @@ object HelloWorldBot {
   def bot(greetingCounter: Int, max: Int): Behavior[HelloWorld.Greeted] =
     Behaviors.receive { (context, message) ⇒
 //      context.log.info("HelloWorldBot: receive message: {} and context {}", message, context)
+      println(s"HelloWorldBot: receive message: $message and context $context", message, context)
       val n = greetingCounter + 1
-      println(s"Greeting ${n} for ${message.whom}")
+      println(s"HelloWorldBot:  Greeting ${n} for ${message.whom}")
       if (n == max) {
         Behaviors.stopped
       } else {
+        println(s"HelloWorldBot:  send Greet message to message.from ${message.from}")
         message.from ! HelloWorld.Greet(message.whom, context.self)
 //        context.log.info("HelloWorldBot: send Greet {} to from {}",
 //          HelloWorld.Greet(message.whom, context.self),
@@ -84,15 +88,18 @@ object HelloWorldMain {
     Behaviors.setup { context ⇒
       val greeter = context.spawn(HelloWorld.greeter, "greeter")
 //      context.log.info("HelloWorldMain: create greeter actor {}", greeter)
+      println(s"HelloWorldMain: create greeter actor $greeter")
       Behaviors.receiveMessage { message ⇒
 //        context.log.info("HelloWorldMain: receive message: {}", message)
+        println(s"HelloWorldMain: receive message: $message")
         val replyTo = context.spawn(
           HelloWorldBot.bot(greetingCounter = 0, max = 3),
           message.name
         )
+        println(s"HelloWorldMain: create replyTo actor: $replyTo")
 //        context.log.info("HelloWorldMain: create replyTo actor: {}", replyTo)
+        println(s"HelloWorldMain: send Greet to greeter")
         greeter ! HelloWorld.Greet(message.name, replyTo)
-//        context.log.info("HelloWorldMain: send Greet to greeter")
         Behaviors.same
       }
     }
@@ -103,7 +110,7 @@ object TypedHelloWorld extends App {
     ActorSystem(HelloWorldMain.main, "hello")
   println("send to World to the HelloWorldMain")
   system ! HelloWorldMain.Start("World")
-  system ! HelloWorldMain.Start("Akka")
+//  system ! HelloWorldMain.Start("Akka")
 
   println(">>> Press ENTER to exit <<<")
   try StdIn.readLine()
